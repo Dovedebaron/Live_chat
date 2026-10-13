@@ -15,24 +15,32 @@ jobs:
 
       - name: Setup SSH key & Clean IP
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Your new Base64 secret
+          SSH_PRIVATE_KEY_BASE64: ${{ secrets.SSH_PRIVATE_KEY }}
           ORACLE_IP: ${{ secrets.ORACLE_IP }}
         run: |
-          # Strip Windows carriage returns (\r) and spaces from IP
+          # Strip formatting errors from IP
           CLEAN_IP=$(echo -n "$ORACLE_IP" | tr -d '\r\n ')
           echo "SERVER_IP=$CLEAN_IP" >> $GITHUB_ENV
 
+          # Configure strict local runner directory permissions
           mkdir -p ~/.ssh
-          printf "%s\n" "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 700 ~/.ssh
+
+          # FIX: Decode the Base64 key cleanly to recreate the exact file structure
+          echo "$SSH_PRIVATE_KEY_BASE64" | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
+          # Scan the remote host keys
           ssh-keyscan -H "$CLEAN_IP" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Sync project files to Oracle Server
         run: |
-          # Ensure target directory exists and has correct permissions
-          ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "sudo mkdir -p /opt/live_chat && sudo chown -R ubuntu:ubuntu /opt/live_chat"
+          # 1. Prepare target directory using verbose SSH logging (-vvv) to expose any handshake failures
+          ssh -vvv -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "sudo mkdir -p /opt/live_chat && sudo chown -R ubuntu:ubuntu /opt/live_chat"
 
-          # Sync repository files (excluding git metadata)
+          # 2. Sync files natively without local sudo
           rsync -avz --delete \
             --exclude '.git' \
             --exclude '.github' \
@@ -41,25 +49,23 @@ jobs:
 
       - name: Build and Restart on Oracle Server
         run: |
-          ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "bash -s" << EOF
-            cd /opt/live_chat
+          ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "bash -s" << 'EOF'
+          cd /opt/live_chat
 
-            echo "Building containers natively on ARM64..."
-            docker compose build
+          echo "Building containers natively on ARM64..."
+          docker compose build
 
-            echo "Restarting containers..."
-            docker compose down || true
-            docker compose up -d
+          echo "Restarting containers..."
+          docker compose down || true
+          docker compose up -d
 
-            echo "Cleaning up dangling images..."
-            docker image prune -f
-
-            echo "Deployment complete! App running at http://$SERVER_IP"
+          echo "Cleaning up dangling images..."
+          docker image prune -f
           EOF
 
       - name: Verify deployment
         run: |
           sleep 5
           echo "Checking if app is healthy..."
-          curl -f --connect-timeout 5 --max-time 15 http:/ || exit 1
-          echo "Verification passed! App is responsive on HTTPS"
+          curl -f --connect-timeout 5 --max-time 15 http://51.170.133.252 || exit 1
+          echo "Verification passed! App is responsive on HTTP"
