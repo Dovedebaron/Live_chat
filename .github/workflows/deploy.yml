@@ -33,7 +33,7 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "sudo mkdir -p /opt/live_chat && sudo chown -R ubuntu:ubuntu /opt/live_chat"
 
           # Sync repository files (excluding git metadata)
-          sudo rsync -avz --delete \
+          rsync -avz --delete \
             --exclude '.git' \
             --exclude '.github' \
             -e "ssh -i ~/.ssh/id_ed25519" \
