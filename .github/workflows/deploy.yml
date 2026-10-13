@@ -67,5 +67,5 @@ jobs:
         run: |
           sleep 5
           echo "Checking if app is healthy..."
-          curl -f --connect-timeout 5 --max-time 15 http://51.170.133.252 || exit 1
+          curl -f --connect-timeout 5 --max-time 15 https://dovedebaron.duckdns.org || exit 1
           echo "Verification passed! App is responsive on HTTP"
