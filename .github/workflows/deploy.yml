@@ -48,18 +48,18 @@ jobs:
       - name: Build and Restart on Oracle Server
         run: |
           ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "bash -s" << 'EOF'
-            cd /opt/live_chat
+          cd /opt/live_chat
 
-            echo "Building containers natively on ARM64..."
-            docker compose build
+          echo "Building containers natively on ARM64..."
+          docker compose build
 
-            echo "Restarting containers..."
-            docker compose down || true
-            docker compose up -d
+          echo "Restarting containers..."
+          docker compose down || true
+          docker compose up -d
 
-            echo "Cleaning up dangling images..."
-            docker image prune -f
-EOF
+          echo "Cleaning up dangling images..."
+          docker image prune -f
+          EOF
 
       - name: Verify deployment
         run: |
