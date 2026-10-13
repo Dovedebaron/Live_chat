@@ -23,7 +23,7 @@ jobs:
           echo "SERVER_IP=$CLEAN_IP" >> $GITHUB_ENV
 
           mkdir -p ~/.ssh
-          printf "%s\n" "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$CLEAN_IP" >> ~/.ssh/known_hosts
 
