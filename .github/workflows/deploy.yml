@@ -33,7 +33,7 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "sudo mkdir -p /opt/live_chat && sudo chown -R ubuntu:ubuntu /opt/live_chat"
 
           # Sync repository files (excluding git metadata)
-          rsync -avz --delete \
+          sudo rsync -avz --delete \
             --exclude '.git' \
             --exclude '.github' \
             -e "ssh -i ~/.ssh/id_ed25519" \
@@ -62,4 +62,4 @@ jobs:
           sleep 5
           echo "Checking if app is healthy..."
           curl -f --connect-timeout 5 --max-time 15 http://51.170.133.252 || exit 1
-          echo "Verification passed! App is responsive on HTTP"
+          echo "Verification passed! App is responsive on HTTP  "
