@@ -53,14 +53,14 @@ jobs:
           cd /opt/live_chat
 
           echo "Building containers natively on ARM64..."
-          docker compose build
+          sudo docker compose build
 
           echo "Restarting containers..."
-          docker compose down || true
+          sudo docker compose down || true
           docker compose up -d
 
           echo "Cleaning up dangling images..."
-          docker image prune -f
+          sudo docker image prune -f
           EOF
 
       - name: Verify deployment
