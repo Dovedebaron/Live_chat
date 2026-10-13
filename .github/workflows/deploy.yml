@@ -22,17 +22,23 @@ jobs:
           CLEAN_IP=$(echo -n "$ORACLE_IP" | tr -d '\r\n ')
           echo "SERVER_IP=$CLEAN_IP" >> $GITHUB_ENV
 
+          # Configure runner strict local permissions
           mkdir -p ~/.ssh
-          printf "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 700 ~/.ssh
+
+          # Fix potential newline stripping in GitHub secrets
+          echo -e "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
           ssh-keyscan -H "$CLEAN_IP" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Sync project files to Oracle Server
         run: |
-          # Ensure target directory exists and has correct permissions
+          # 1. Prepare target directory on the remote server using sudo via SSH
           ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "sudo mkdir -p /opt/live_chat && sudo chown -R ubuntu:ubuntu /opt/live_chat"
 
-          # Sync repository files (excluding git metadata)
+          # 2. Sync files without local sudo so rsync can find your runner's SSH key
           rsync -avz --delete \
             --exclude '.git' \
             --exclude '.github' \
@@ -41,7 +47,7 @@ jobs:
 
       - name: Build and Restart on Oracle Server
         run: |
-          ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "bash -s" << EOF
+          ssh -i ~/.ssh/id_ed25519 ubuntu@$SERVER_IP "bash -s" << 'EOF'
             cd /opt/live_chat
 
             echo "Building containers natively on ARM64..."
@@ -53,13 +59,11 @@ jobs:
 
             echo "Cleaning up dangling images..."
             docker image prune -f
-
-            echo "Deployment complete! App running at http://$SERVER_IP"
-          EOF
+EOF
 
       - name: Verify deployment
         run: |
           sleep 5
           echo "Checking if app is healthy..."
           curl -f --connect-timeout 5 --max-time 15 http://51.170.133.252 || exit 1
-          echo "Verification passed! App is responsive on HTTP  "
+          echo "Verification passed! App is responsive on HTTP"
